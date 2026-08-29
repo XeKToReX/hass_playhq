@@ -230,6 +230,48 @@ def venue_text(game: dict) -> str | None:
     return ", ".join(parts) if parts else None
 
 
+# ---------------------------------------------------------------------------
+# Player statistics (publicProfileStatistics) - anonymous, but there is no
+# anonymous player search on PlayHQ, so the caller must already know the
+# profile ID (a UUID, e.g. from a public PlayHQ player-profile page URL).
+# ---------------------------------------------------------------------------
+PLAYER_STATISTICS_QUERY = """
+query PublicProfileStatistics($profileID: ID!) {
+  publicProfileStatistics(profileID: $profileID) {
+    careerStatistics {
+      totalStatistics { type { value } count __typename }
+      clubStatistics {
+        club { id name __typename }
+        statistics { type { value } count __typename }
+        __typename
+      }
+      __typename
+    }
+    seasonStatistics {
+      name
+      statistics {
+        role
+        club { id name __typename }
+        totalStatistics { type { value } count __typename }
+        teamStatistics {
+          team {
+            ... on DiscoverTeam { id name __typename }
+            ... on ProvisionalTeam { name __typename }
+            __typename
+          }
+          totalStatistics { type { value } count __typename }
+          __typename
+        }
+        __typename
+      }
+      __typename
+    }
+    __typename
+  }
+}
+"""
+
+
 class PlayHQClient:
     """Async wrapper around PlayHQ's discover/spectator GraphQL endpoints."""
 
@@ -294,6 +336,10 @@ class PlayHQClient:
     async def get_live_detail(self, game_id: str) -> dict | None:
         data = await self._gql(SPECTATOR_URL, "Game", LIVE_GAME_QUERY, {"id": game_id})
         return data.get("game")
+
+    async def get_player_statistics(self, profile_id: str) -> dict | None:
+        data = await self._gql(API_URL, "PublicProfileStatistics", PLAYER_STATISTICS_QUERY, {"profileID": profile_id})
+        return data.get("publicProfileStatistics")
 
 
 def pick_active_season(competition: dict) -> dict | None:

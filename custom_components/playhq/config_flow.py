@@ -1,4 +1,4 @@
-"""Config flow for PlayHQ: search a club, then pick a team to track."""
+"""Config flow for PlayHQ: track a team (search a club) or a player (by profile ID)."""
 from __future__ import annotations
 
 import logging
@@ -12,20 +12,25 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .api import PlayHQApiError, PlayHQClient, pick_active_season
 from .const import (
     CONF_GRADE_NAME,
+    CONF_KIND,
     CONF_ORG_ID,
     CONF_ORG_NAME,
+    CONF_PLAYER_NAME,
+    CONF_PROFILE_ID,
     CONF_TEAM_ID,
     CONF_TEAM_NAME,
     CONF_TENANT,
     DEFAULT_TENANT,
     DOMAIN,
+    KIND_PLAYER,
+    KIND_TEAM,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class PlayHQConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Search PlayHQ for a club, then choose one of its teams."""
+    """Track a PlayHQ team (search a club) or a player (by profile ID)."""
 
     VERSION = 1
 
@@ -38,6 +43,10 @@ class PlayHQConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return PlayHQClient(async_get_clientsession(self.hass), tenant=DEFAULT_TENANT)
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> config_entries.FlowResult:
+        return self.async_show_menu(step_id="user", menu_options=["track_team", "track_player"])
+
+    # -- Team flow -----------------------------------------------------
+    async def async_step_track_team(self, user_input: dict[str, Any] | None = None) -> config_entries.FlowResult:
         errors: dict[str, str] = {}
 
         if user_input is not None:
@@ -54,7 +63,7 @@ class PlayHQConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     return await self.async_step_org()
 
         schema = vol.Schema({vol.Required("club_search"): str})
-        return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
+        return self.async_show_form(step_id="track_team", data_schema=schema, errors=errors)
 
     async def async_step_org(self, user_input: dict[str, Any] | None = None) -> config_entries.FlowResult:
         errors: dict[str, str] = {}
@@ -104,11 +113,12 @@ class PlayHQConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             team = next(t for t in self._teams if t["id"] == user_input["team"])
-            await self.async_set_unique_id(team["id"])
+            await self.async_set_unique_id(f"team_{team['id']}")
             self._abort_if_unique_id_configured()
             return self.async_create_entry(
                 title=team["name"],
                 data={
+                    CONF_KIND: KIND_TEAM,
                     CONF_TENANT: DEFAULT_TENANT,
                     CONF_ORG_ID: self._selected_org["routingCode"],
                     CONF_ORG_NAME: self._selected_org["name"],
@@ -120,3 +130,40 @@ class PlayHQConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         schema = vol.Schema({vol.Required("team"): vol.In(team_choices)})
         return self.async_show_form(step_id="team", data_schema=schema, errors=errors)
+
+    # -- Player flow -----------------------------------------------------
+    async def async_step_track_player(self, user_input: dict[str, Any] | None = None) -> config_entries.FlowResult:
+        """PlayHQ has no anonymous player search, so the user supplies the profile ID directly.
+
+        It's the UUID visible in the URL of a public PlayHQ player-profile page
+        (e.g. https://www.playhq.com/.../profile/<this-part>), or found via a
+        game centre lineup.
+        """
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            profile_id = user_input["profile_id"].strip()
+            player_name = user_input["player_name"].strip()
+            try:
+                stats = await self._client().get_player_statistics(profile_id)
+            except PlayHQApiError as err:
+                _LOGGER.warning("PlayHQ player lookup failed: %s", err)
+                errors["base"] = "player_lookup_failed"
+            else:
+                if stats is None:
+                    errors["base"] = "player_not_found"
+                else:
+                    await self.async_set_unique_id(f"player_{profile_id}")
+                    self._abort_if_unique_id_configured()
+                    return self.async_create_entry(
+                        title=player_name,
+                        data={
+                            CONF_KIND: KIND_PLAYER,
+                            CONF_TENANT: DEFAULT_TENANT,
+                            CONF_PROFILE_ID: profile_id,
+                            CONF_PLAYER_NAME: player_name,
+                        },
+                    )
+
+        schema = vol.Schema({vol.Required("profile_id"): str, vol.Required("player_name"): str})
+        return self.async_show_form(step_id="track_player", data_schema=schema, errors=errors)

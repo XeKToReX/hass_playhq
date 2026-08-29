@@ -2,6 +2,13 @@
   "config": {
     "step": {
       "user": {
+        "title": "What do you want to track?",
+        "menu_options": {
+          "track_team": "A team",
+          "track_player": "A player"
+        }
+      },
+      "track_team": {
         "title": "Find your club",
         "description": "Search PlayHQ for your club or association.",
         "data": { "club_search": "Club name" }
@@ -13,16 +20,26 @@
       "team": {
         "title": "Select your team",
         "data": { "team": "Team" }
+      },
+      "track_player": {
+        "title": "Track a player",
+        "description": "PlayHQ has no public player search, so enter their profile ID directly - it's the UUID in a public PlayHQ player-profile page URL.",
+        "data": {
+          "profile_id": "Profile ID (UUID)",
+          "player_name": "Display name"
+        }
       }
     },
     "error": {
       "search_failed": "Could not search PlayHQ. Please try again.",
       "no_results": "No clubs found for that search.",
       "team_lookup_failed": "Could not load teams for that club.",
-      "no_teams": "No teams found in the active season for that club."
+      "no_teams": "No teams found in the active season for that club.",
+      "player_lookup_failed": "Could not look up that player. Please try again.",
+      "player_not_found": "No public statistics found for that profile ID."
     },
     "abort": {
-      "already_configured": "This team is already being tracked."
+      "already_configured": "This is already being tracked."
     }
   },
   "entity": {
@@ -35,6 +52,9 @@
           "final": "Final",
           "unknown": "Unknown"
         }
+      },
+      "player_games_played": {
+        "name": "Games played"
       }
     }
   }

@@ -1,8 +1,9 @@
 # PlayHQ for Home Assistant
 
 Unofficial Home Assistant integration for [PlayHQ](https://www.playhq.com) - live
-scores, next match, and last result for a team, using PlayHQ's public
-(unauthenticated) GraphQL APIs. No PlayHQ login required.
+scores, next match, last result for a team, and career/season stats for a
+player, using PlayHQ's public (unauthenticated) GraphQL APIs. No PlayHQ login
+required.
 
 Not affiliated with or endorsed by PlayHQ.
 
@@ -17,38 +18,55 @@ Copy `custom_components/playhq` into your `config/custom_components/` folder and
 
 ## Setup
 
-Settings -> Devices & Services -> Add Integration -> **PlayHQ**.
-Search for your club, pick it from the results, then pick your team. A sensor
-(`sensor.<team>_status`) is created with the team's live/next/last-result data
-as attributes, and its state is `live`, `scheduled`, `final`, or `unknown`.
+Settings -> Devices & Services -> Add Integration -> **PlayHQ**, then choose
+what to track:
 
-Add another integration entry per team you want to track.
+- **A team** - search for your club, pick it from the results, then pick a
+  team. Creates `sensor.<team>_status` with the team's live/next/last-result
+  data as attributes; state is `live`, `scheduled`, `final`, or `unknown`.
+- **A player** - PlayHQ has no public player search, so you enter their
+  **profile ID** (a UUID) directly - it's the ID in a public PlayHQ
+  player-profile page URL, e.g.
+  `https://www.playhq.com/.../profile/<this-part>`. Creates
+  `sensor.<player>_games_played` with career and current-season statistics as
+  attributes; state is the player's career games-played count.
+
+Add another integration entry per team or player you want to track.
 
 ## Card
 
 The `playhq-card` Lovelace card is bundled and auto-registered as a frontend
-resource - no manual resource setup needed. Example:
+resource - no manual resource setup needed. Add it via the dashboard UI (it
+has a full visual editor: pick the entity from a dropdown, toggle which
+sections show, and reorder them with the arrow buttons), or in YAML:
 
 ```yaml
 type: custom:playhq-card
-entity: sensor.your_team_status
-show_live: true
-show_next: true
-show_last_result: true
+entity: sensor.your_team_status   # or sensor.your_player_games_played
+title: My Team                    # optional, defaults to the team/player name
 show_logos: true
 show_quarters: true
+section_order: [live, next, last_result, career, season]
+disabled_sections: []             # e.g. [career, season] to hide those on a team card
 ```
 
-All `show_*` options default to `true`; set any to `false` to hide that
-section. `title` optionally overrides the card header.
+Sections a team entity has no data for (`career`, `season`) and sections a
+player entity has no data for (`live`, `next`, `last_result`) are simply
+skipped, so the same card config works for either entity type.
 
 ## How it works / limitations
 
 This uses the same anonymous GraphQL endpoints PlayHQ's own app and website
-use for public score/fixture viewing (`api.playhq.com`, `spectator.playhq.com`,
-`search.playhq.com`). PlayHQ has no official public API, so field names were
-reverse-engineered from live traffic and may change without notice - if the
-integration starts erroring, check for an update or open an issue.
+use for public score/fixture/profile viewing (`api.playhq.com`,
+`spectator.playhq.com`, `search.playhq.com`). PlayHQ has no official public
+API, so field names were reverse-engineered from live traffic and may change
+without notice - if the integration starts erroring, check for an update or
+open an issue.
 
-Polling is every 5 minutes normally, and every 20 seconds while a tracked
-team has a game in progress.
+Team polling is every 5 minutes normally, and every 20 seconds while a
+tracked team has a game in progress. Player stats only change after a game is
+finalised, so those poll every 30 minutes.
+
+Player tracking requires you to already know the player's profile ID - there
+is no anonymous way to search for a player by name on PlayHQ, only clubs and
+teams are searchable.
