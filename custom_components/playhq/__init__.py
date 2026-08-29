@@ -6,7 +6,7 @@ from pathlib import Path
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 
 from .const import CONF_TEAM_ID, CONF_TEAM_NAME, CONF_TENANT, DEFAULT_TENANT, DOMAIN, PLATFORMS
 from .coordinator import PlayHQCoordinator
@@ -34,9 +34,11 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     if hass.is_running:
         hass.async_create_task(_async_register_card_resource(hass))
     else:
-        hass.bus.async_listen_once(
-            EVENT_HOMEASSISTANT_STARTED, lambda _event: hass.async_create_task(_async_register_card_resource(hass))
-        )
+        @callback
+        def _on_started(_event: object) -> None:
+            hass.async_create_task(_async_register_card_resource(hass))
+
+        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _on_started)
     return True
 
 
