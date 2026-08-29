@@ -16,8 +16,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def _stat_key(stat: dict) -> Any:
-    details = stat.get("details") or []
-    return details[0].get("value") if details else None
+    details = stat.get("details")
+    if isinstance(details, list):
+        return details[0].get("value") if details else None
+    if isinstance(details, dict):
+        return details.get("value")
+    return None
 
 
 def _stat(stats_list: list[dict] | None, key: str) -> Any:
