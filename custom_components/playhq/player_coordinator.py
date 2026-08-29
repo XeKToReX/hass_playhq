@@ -15,9 +15,14 @@ from .const import DOMAIN, PLAYER_UPDATE_INTERVAL
 _LOGGER = logging.getLogger(__name__)
 
 
+def _stat_key(stat: dict) -> Any:
+    details = stat.get("details") or []
+    return details[0].get("value") if details else None
+
+
 def _stat(stats_list: list[dict] | None, key: str) -> Any:
     for s in stats_list or []:
-        if (s.get("type") or {}).get("value") == key:
+        if _stat_key(s) == key:
             return s.get("count")
     return None
 
@@ -51,7 +56,7 @@ class PlayHQPlayerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             {
                 "club_name": (c.get("club") or {}).get("name"),
                 "statistics": {
-                    (s.get("type") or {}).get("value"): s.get("count") for s in c.get("statistics") or []
+                    _stat_key(s): s.get("count") for s in c.get("statistics") or []
                 },
             }
             for c in career.get("clubStatistics") or []
@@ -69,14 +74,14 @@ class PlayHQPlayerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         "role": reg.get("role"),
                         "club_name": (reg.get("club") or {}).get("name"),
                         "statistics": {
-                            (s.get("type") or {}).get("value"): s.get("count")
+                            _stat_key(s): s.get("count")
                             for s in reg.get("totalStatistics") or []
                         },
                         "teams": [
                             {
                                 "team_name": (t.get("team") or {}).get("name"),
                                 "statistics": {
-                                    (s.get("type") or {}).get("value"): s.get("count")
+                                    _stat_key(s): s.get("count")
                                     for s in t.get("totalStatistics") or []
                                 },
                             }
@@ -89,7 +94,7 @@ class PlayHQPlayerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         return {
             "career": {
-                "totals": {(s.get("type") or {}).get("value"): s.get("count") for s in career_totals},
+                "totals": {_stat_key(s): s.get("count") for s in career_totals},
                 "clubs": career_clubs,
             },
             "current_season": current_season,

@@ -239,10 +239,10 @@ PLAYER_STATISTICS_QUERY = """
 query PublicProfileStatistics($profileID: ID!) {
   publicProfileStatistics(profileID: $profileID) {
     careerStatistics {
-      totalStatistics { type { value } count __typename }
+      totalStatistics { count details { value __typename } gameFormat __typename }
       clubStatistics {
         club { id name __typename }
-        statistics { type { value } count __typename }
+        statistics { count details { value __typename } gameFormat __typename }
         __typename
       }
       __typename
@@ -252,14 +252,14 @@ query PublicProfileStatistics($profileID: ID!) {
       statistics {
         role
         club { id name __typename }
-        totalStatistics { type { value } count __typename }
+        totalStatistics { count details { value __typename } gameFormat __typename }
         teamStatistics {
           team {
             ... on DiscoverTeam { id name __typename }
             ... on ProvisionalTeam { name __typename }
             __typename
           }
-          totalStatistics { type { value } count __typename }
+          totalStatistics { count details { value __typename } gameFormat __typename }
           __typename
         }
         __typename
