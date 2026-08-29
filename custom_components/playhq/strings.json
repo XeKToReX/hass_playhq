@@ -1,0 +1,41 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Find your club",
+        "description": "Search PlayHQ for your club or association.",
+        "data": { "club_search": "Club name" }
+      },
+      "org": {
+        "title": "Select your club",
+        "data": { "organisation": "Club" }
+      },
+      "team": {
+        "title": "Select your team",
+        "data": { "team": "Team" }
+      }
+    },
+    "error": {
+      "search_failed": "Could not search PlayHQ. Please try again.",
+      "no_results": "No clubs found for that search.",
+      "team_lookup_failed": "Could not load teams for that club.",
+      "no_teams": "No teams found in the active season for that club."
+    },
+    "abort": {
+      "already_configured": "This team is already being tracked."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "team_status": {
+        "name": "Status",
+        "state": {
+          "live": "Live",
+          "scheduled": "Scheduled",
+          "final": "Final",
+          "unknown": "Unknown"
+        }
+      }
+    }
+  }
+}

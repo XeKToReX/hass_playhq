@@ -1,0 +1,11 @@
+{
+  "domain": "playhq",
+  "name": "PlayHQ",
+  "codeowners": [],
+  "config_flow": true,
+  "documentation": "https://github.com/yourusername/hass-playhq",
+  "issue_tracker": "https://github.com/yourusername/hass-playhq/issues",
+  "iot_class": "cloud_polling",
+  "requirements": [],
+  "version": "0.1.0"
+}
