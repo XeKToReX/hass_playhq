@@ -85,6 +85,15 @@ Player tracking requires you to already know the player's profile ID - there
 is no anonymous way to search for a player by name on PlayHQ, only clubs and
 teams are searchable.
 
+PlayHQ's profile system is shared across sports it runs directly - the same
+profile UUID (from `playhq.com/public/profile/<uuid>/statistics`) works for
+both AFL and basketball, and the integration's `tenant` setting determines
+which sport's stats come back for it. **Cricket is the exception**: cricket
+player profiles live on Cricket Australia's own site
+(`play.cricket.com.au/player/<uuid>/...`), a separate platform with no
+PlayHQ profile-stats API behind it, so player tracking isn't offered for
+cricket - only team tracking.
+
 PlayHQ uses one shared GraphQL schema across every sport it powers, so the
 same queries work for AFL, basketball, and cricket - only the scoring fields
 differ. The quarter-by-quarter breakdown table is AFL-specific (basketball and

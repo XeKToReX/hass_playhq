@@ -89,7 +89,24 @@ class PlayHQConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_kind(self, user_input: dict[str, Any] | None = None) -> config_entries.FlowResult:
-        return self.async_show_menu(step_id="kind", menu_options=["track_team", "track_player"])
+        if self._sport == SPORT_CRICKET:
+            # Cricket player profiles live on Cricket Australia's own site
+            # (play.cricket.com.au), not PlayHQ's shared profile system - there's
+            # no publicProfileStatistics data to query for a cricket.com.au profile ID.
+            menu_options = ["track_team"]
+            note = (
+                "Player tracking isn't available for cricket - cricket player "
+                "profiles live on Cricket Australia's own site "
+                "(play.cricket.com.au), not PlayHQ's shared profile system."
+            )
+        else:
+            menu_options = ["track_team", "track_player"]
+            note = ""
+        return self.async_show_menu(
+            step_id="kind",
+            menu_options=menu_options,
+            description_placeholders={"note": note},
+        )
 
     # -- Team flow -----------------------------------------------------
     async def async_step_track_team(self, user_input: dict[str, Any] | None = None) -> config_entries.FlowResult:

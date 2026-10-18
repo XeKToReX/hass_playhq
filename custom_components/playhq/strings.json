@@ -16,6 +16,7 @@
       },
       "kind": {
         "title": "What do you want to track?",
+        "description": "{note}",
         "menu_options": {
           "track_team": "A team",
           "track_player": "A player"
