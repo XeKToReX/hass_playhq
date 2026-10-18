@@ -23,6 +23,12 @@ SPORT_BASKETBALL = "basketball"
 SPORT_CRICKET = "cricket"
 DEFAULT_SPORT = SPORT_AFL
 
+SPORT_LABELS = {
+    SPORT_AFL: "AFL",
+    SPORT_BASKETBALL: "Basketball",
+    SPORT_CRICKET: "Cricket",
+}
+
 DEFAULT_TENANT = "afl"
 
 # Poll interval when nothing live is happening, vs. while a game is in progress.

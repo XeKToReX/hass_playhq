@@ -21,6 +21,7 @@ from .const import (
     DOMAIN,
     KIND_PLAYER,
     MANUFACTURER,
+    SPORT_LABELS,
 )
 from .coordinator import PlayHQCoordinator
 from .player_coordinator import PlayHQPlayerCoordinator
@@ -89,7 +90,13 @@ class PlayHQPlayerSensor(CoordinatorEntity[PlayHQPlayerCoordinator], SensorEntit
     def __init__(self, coordinator: PlayHQPlayerCoordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator)
         self._entry = entry
-        self._attr_unique_id = f"{entry.data[CONF_PROFILE_ID]}_games_played"
+        sport = entry.data.get(CONF_SPORT, DEFAULT_SPORT)
+        # The same PlayHQ profile UUID can be shared across sports (e.g. AFL and
+        # basketball) - the sport must be part of the unique_id, or a second
+        # tracked sport for the same person collides with the first and silently
+        # fails to register as its own entity.
+        self._attr_unique_id = f"{sport}_{entry.data[CONF_PROFILE_ID]}_games_played"
+        self._attr_translation_placeholders = {"sport": SPORT_LABELS.get(sport, sport.title())}
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.data[CONF_PROFILE_ID])},
             name=entry.data[CONF_PLAYER_NAME],
@@ -107,6 +114,7 @@ class PlayHQPlayerSensor(CoordinatorEntity[PlayHQPlayerCoordinator], SensorEntit
     def extra_state_attributes(self) -> dict:
         data = self.coordinator.data or {}
         return {
+            "sport": self._entry.data.get(CONF_SPORT, DEFAULT_SPORT),
             "player_name": self._entry.data.get(CONF_PLAYER_NAME),
             "profile_id": self._entry.data.get(CONF_PROFILE_ID),
             "career": data.get("career"),

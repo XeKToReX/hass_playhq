@@ -68,7 +68,7 @@
         }
       },
       "player_games_played": {
-        "name": "Games played"
+        "name": "Games played ({sport})"
       }
     }
   }
