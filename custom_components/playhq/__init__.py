@@ -12,9 +12,11 @@ from .const import (
     CONF_KIND,
     CONF_PLAYER_NAME,
     CONF_PROFILE_ID,
+    CONF_SPORT,
     CONF_TEAM_ID,
     CONF_TEAM_NAME,
     CONF_TENANT,
+    DEFAULT_SPORT,
     DEFAULT_TENANT,
     DOMAIN,
     KIND_PLAYER,
@@ -106,6 +108,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             team_id=entry.data[CONF_TEAM_ID],
             team_name=entry.data[CONF_TEAM_NAME],
             tenant=entry.data.get(CONF_TENANT, DEFAULT_TENANT),
+            sport=entry.data.get(CONF_SPORT, DEFAULT_SPORT),
         )
     await coordinator.async_config_entry_first_refresh()
 

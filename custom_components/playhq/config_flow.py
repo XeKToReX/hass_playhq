@@ -17,6 +17,7 @@ from .const import (
     CONF_ORG_NAME,
     CONF_PLAYER_NAME,
     CONF_PROFILE_ID,
+    CONF_SPORT,
     CONF_TEAM_ID,
     CONF_TEAM_NAME,
     CONF_TENANT,
@@ -24,9 +25,14 @@ from .const import (
     DOMAIN,
     KIND_PLAYER,
     KIND_TEAM,
+    SPORT_AFL,
+    SPORT_BASKETBALL,
+    SPORT_CRICKET,
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+CRICKET_DEFAULT_TENANT = "cricket-australia"
 
 
 class PlayHQConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -38,12 +44,52 @@ class PlayHQConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._orgs: list[dict] = []
         self._teams: list[dict] = []
         self._selected_org: dict | None = None
+        self._sport: str = SPORT_AFL
+        self._tenant: str = DEFAULT_TENANT
 
     def _client(self) -> PlayHQClient:
-        return PlayHQClient(async_get_clientsession(self.hass), tenant=DEFAULT_TENANT)
+        return PlayHQClient(async_get_clientsession(self.hass), tenant=self._tenant)
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> config_entries.FlowResult:
-        return self.async_show_menu(step_id="user", menu_options=["track_team", "track_player"])
+        return self.async_show_menu(
+            step_id="user",
+            menu_options=["sport_afl", "sport_basketball", "sport_cricket"],
+        )
+
+    async def async_step_sport_afl(self, user_input: dict[str, Any] | None = None) -> config_entries.FlowResult:
+        self._sport = SPORT_AFL
+        self._tenant = DEFAULT_TENANT
+        return await self.async_step_kind()
+
+    async def async_step_sport_basketball(self, user_input: dict[str, Any] | None = None) -> config_entries.FlowResult:
+        self._sport = SPORT_BASKETBALL
+        return await self.async_step_tenant()
+
+    async def async_step_sport_cricket(self, user_input: dict[str, Any] | None = None) -> config_entries.FlowResult:
+        self._sport = SPORT_CRICKET
+        return await self.async_step_tenant()
+
+    async def async_step_tenant(self, user_input: dict[str, Any] | None = None) -> config_entries.FlowResult:
+        """Basketball and cricket are run by separate state/national bodies, each its own PlayHQ tenant."""
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            self._tenant = user_input["tenant"].strip()
+            return await self.async_step_kind()
+
+        if self._sport == SPORT_CRICKET:
+            schema = vol.Schema({vol.Required("tenant", default=CRICKET_DEFAULT_TENANT): str})
+        else:
+            schema = vol.Schema({vol.Required("tenant"): str})
+        return self.async_show_form(
+            step_id="tenant",
+            data_schema=schema,
+            errors=errors,
+            description_placeholders={"sport": self._sport},
+        )
+
+    async def async_step_kind(self, user_input: dict[str, Any] | None = None) -> config_entries.FlowResult:
+        return self.async_show_menu(step_id="kind", menu_options=["track_team", "track_player"])
 
     # -- Team flow -----------------------------------------------------
     async def async_step_track_team(self, user_input: dict[str, Any] | None = None) -> config_entries.FlowResult:
@@ -113,13 +159,14 @@ class PlayHQConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             team = next(t for t in self._teams if t["id"] == user_input["team"])
-            await self.async_set_unique_id(f"team_{team['id']}")
+            await self.async_set_unique_id(f"team_{self._tenant}_{team['id']}")
             self._abort_if_unique_id_configured()
             return self.async_create_entry(
                 title=team["name"],
                 data={
                     CONF_KIND: KIND_TEAM,
-                    CONF_TENANT: DEFAULT_TENANT,
+                    CONF_SPORT: self._sport,
+                    CONF_TENANT: self._tenant,
                     CONF_ORG_ID: self._selected_org["routingCode"],
                     CONF_ORG_NAME: self._selected_org["name"],
                     CONF_TEAM_ID: team["id"],
@@ -153,13 +200,14 @@ class PlayHQConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if stats is None:
                     errors["base"] = "player_not_found"
                 else:
-                    await self.async_set_unique_id(f"player_{profile_id}")
+                    await self.async_set_unique_id(f"player_{self._tenant}_{profile_id}")
                     self._abort_if_unique_id_configured()
                     return self.async_create_entry(
                         title=player_name,
                         data={
                             CONF_KIND: KIND_PLAYER,
-                            CONF_TENANT: DEFAULT_TENANT,
+                            CONF_SPORT: self._sport,
+                            CONF_TENANT: self._tenant,
                             CONF_PROFILE_ID: profile_id,
                             CONF_PLAYER_NAME: player_name,
                         },

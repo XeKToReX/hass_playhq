@@ -14,8 +14,10 @@ from .const import (
     CONF_ORG_NAME,
     CONF_PLAYER_NAME,
     CONF_PROFILE_ID,
+    CONF_SPORT,
     CONF_TEAM_ID,
     CONF_TEAM_NAME,
+    DEFAULT_SPORT,
     DOMAIN,
     KIND_PLAYER,
     MANUFACTURER,
@@ -66,6 +68,7 @@ class PlayHQTeamSensor(CoordinatorEntity[PlayHQCoordinator], SensorEntity):
     def extra_state_attributes(self) -> dict:
         data = self.coordinator.data or {}
         return {
+            "sport": self._entry.data.get(CONF_SPORT, DEFAULT_SPORT),
             "team_name": self._entry.data.get(CONF_TEAM_NAME),
             "org_name": self._entry.data.get(CONF_ORG_NAME),
             "grade_name": self._entry.data.get(CONF_GRADE_NAME),

@@ -160,6 +160,12 @@ class PlayHQCard extends HTMLElement {
     return `${find("TOTAL_GOALS")}.${find("TOTAL_BEHINDS")} (${find("TOTAL_SCORE")})`;
   }
 
+  _scoreBreakdown(scoreText, score) {
+    if (!scoreText) return "";
+    if (scoreText === String(score ?? "")) return "";
+    return `<div class="phq-breakdown">${escapeHtml(scoreText)}</div>`;
+  }
+
   _renderLive(attrs) {
     const live = attrs.live;
     if (!live) return "";
@@ -175,14 +181,14 @@ class PlayHQCard extends HTMLElement {
             ${this._logoImg(live.home.logo, live.home.name)}
             <div class="phq-team-name">${escapeHtml(live.home.name)}</div>
             <div class="phq-score">${live.home_score ?? "-"}</div>
-            <div class="phq-breakdown">${live.home_goals ?? "-"}.${live.home_behinds ?? "-"}</div>
+            ${this._scoreBreakdown(live.home_score_text, live.home_score)}
           </div>
           <div class="phq-vs">vs</div>
           <div class="phq-team">
             ${this._logoImg(live.away.logo, live.away.name)}
             <div class="phq-team-name">${escapeHtml(live.away.name)}</div>
             <div class="phq-score">${live.away_score ?? "-"}</div>
-            <div class="phq-breakdown">${live.away_goals ?? "-"}.${live.away_behinds ?? "-"}</div>
+            ${this._scoreBreakdown(live.away_score_text, live.away_score)}
           </div>
         </div>
         ${this._quarterTable(live.home.name, live.away.name, live.home_periods, live.away_periods)}
@@ -225,7 +231,7 @@ class PlayHQCard extends HTMLElement {
             ${this._logoImg(last.home.logo, last.home.name)}
             ${escapeHtml(last.home.name)}
           </span>
-          <span>${last.home_score ?? "-"} - ${last.away_score ?? "-"}</span>
+          <span>${escapeHtml(last.home_score_text ?? String(last.home_score ?? "-"))} - ${escapeHtml(last.away_score_text ?? String(last.away_score ?? "-"))}</span>
           <span class="phq-row-teams">
             ${escapeHtml(last.away.name)}
             ${this._logoImg(last.away.logo, last.away.name)}
@@ -322,7 +328,7 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: "playhq-card",
   name: "PlayHQ",
-  description: "Live scores, next match, last result, and player stats for PlayHQ.",
+  description: "Live scores, next match, last result, and player stats for PlayHQ (AFL, basketball, cricket).",
 });
 
 /* ------------------------------------------------------------------ */

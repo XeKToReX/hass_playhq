@@ -12,12 +12,13 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .api import (
     PlayHQApiError,
     PlayHQClient,
-    extract_score,
+    format_score_text,
+    numeric_score,
+    periods_by_quarter,
     pick_logo_url,
-    stat,
     venue_text,
 )
-from .const import DOMAIN, IDLE_UPDATE_INTERVAL, LIVE_UPDATE_INTERVAL
+from .const import DOMAIN, IDLE_UPDATE_INTERVAL, LIVE_UPDATE_INTERVAL, SPORT_AFL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,9 +28,10 @@ QUARTER_LABELS = {"FIRST_QTR": "Q1", "SECOND_QTR": "Q2", "THIRD_QTR": "Q3", "FOU
 class PlayHQCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Polls a team's fixture (and live game clock, when relevant)."""
 
-    def __init__(self, hass: HomeAssistant, team_id: str, team_name: str, tenant: str) -> None:
+    def __init__(self, hass: HomeAssistant, team_id: str, team_name: str, tenant: str, sport: str = SPORT_AFL) -> None:
         self.team_id = team_id
         self.team_name = team_name
+        self.sport = sport
         self.client = PlayHQClient(async_get_clientsession(hass), tenant=tenant)
         super().__init__(
             hass,
@@ -96,23 +98,32 @@ class PlayHQCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "away": self._team_summary(away),
         }
 
+    def _side(self, result: dict | None, side: str) -> tuple[list, list]:
+        side_data = (result or {}).get(side) or {}
+        return side_data.get("statistics") or [], side_data.get("periods") or []
+
     def _build_result(self, game: dict) -> dict:
         home, away = game.get("home") or {}, game.get("away") or {}
-        home_stats, away_stats, _, _ = extract_score(game.get("result"))
+        result = game.get("result") or {}
+        home_stats, home_periods = self._side(result, "home")
+        away_stats, away_periods = self._side(result, "away")
         return {
             "id": game.get("id"),
             "dates": game.get("dates") or [],
             "home": self._team_summary(home),
             "away": self._team_summary(away),
-            "home_score": stat(home_stats, "TOTAL_SCORE"),
-            "away_score": stat(away_stats, "TOTAL_SCORE"),
+            "home_score": numeric_score(self.sport, home_stats, home_periods),
+            "away_score": numeric_score(self.sport, away_stats, away_periods),
+            "home_score_text": format_score_text(self.sport, home_stats, home_periods),
+            "away_score_text": format_score_text(self.sport, away_stats, away_periods),
         }
 
     def _build_live(self, game: dict, live_detail: dict | None) -> dict:
         home, away = game.get("home") or {}, game.get("away") or {}
         result = live_detail.get("result") if live_detail else game.get("result")
         clock = (live_detail or {}).get("clock") or {}
-        home_stats, away_stats, home_periods, away_periods = extract_score(result)
+        home_stats, home_periods = self._side(result, "home")
+        away_stats, away_periods = self._side(result, "away")
 
         period_label = clock.get("period")
         if not period_label:
@@ -124,16 +135,14 @@ class PlayHQCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "venue": venue_text(game),
             "home": self._team_summary(home),
             "away": self._team_summary(away),
-            "home_score": stat(home_stats, "TOTAL_SCORE"),
-            "away_score": stat(away_stats, "TOTAL_SCORE"),
-            "home_goals": stat(home_stats, "TOTAL_GOALS"),
-            "home_behinds": stat(home_stats, "TOTAL_BEHINDS"),
-            "away_goals": stat(away_stats, "TOTAL_GOALS"),
-            "away_behinds": stat(away_stats, "TOTAL_BEHINDS"),
+            "home_score": numeric_score(self.sport, home_stats, home_periods),
+            "away_score": numeric_score(self.sport, away_stats, away_periods),
+            "home_score_text": format_score_text(self.sport, home_stats, home_periods),
+            "away_score_text": format_score_text(self.sport, away_stats, away_periods),
             "period": period_label,
             "clock_time": clock.get("time"),
             "clock_paused": clock.get("status") not in (None, "RESUME"),
-            "home_periods": home_periods,
-            "away_periods": away_periods,
+            "home_periods": periods_by_quarter(home_periods) if self.sport == SPORT_AFL else {},
+            "away_periods": periods_by_quarter(away_periods) if self.sport == SPORT_AFL else {},
             "updated_at": (live_detail or {}).get("updatedAt"),
         }

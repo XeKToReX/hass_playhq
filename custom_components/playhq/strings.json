@@ -2,6 +2,19 @@
   "config": {
     "step": {
       "user": {
+        "title": "Which sport?",
+        "menu_options": {
+          "sport_afl": "AFL",
+          "sport_basketball": "Basketball",
+          "sport_cricket": "Cricket"
+        }
+      },
+      "tenant": {
+        "title": "Which PlayHQ tenant?",
+        "description": "{sport} on PlayHQ is run by separate state or national bodies, each its own PlayHQ tenant - it's the first part of the URL on any of that body's PlayHQ pages, e.g. 'basketball-victoria' in playhq.com/basketball-victoria/org/..., or 'cricket-australia' in playhq.com/cricket-australia/org/...",
+        "data": { "tenant": "Tenant" }
+      },
+      "kind": {
         "title": "What do you want to track?",
         "menu_options": {
           "track_team": "A team",

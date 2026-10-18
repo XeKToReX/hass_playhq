@@ -185,13 +185,6 @@ query Game($id: ID!) {{
 # ---------------------------------------------------------------------------
 # Small shape-independent helpers reused by the coordinator
 # ---------------------------------------------------------------------------
-def stat(stats_list: list[dict] | None, key: str) -> Any:
-    for s in stats_list or []:
-        if s["type"]["value"] == key:
-            return s["count"]
-    return None
-
-
 def periods_by_quarter(periods: list[dict] | None) -> dict[str, list[dict]]:
     out: dict[str, list[dict]] = {}
     for p in periods or []:
@@ -201,18 +194,56 @@ def periods_by_quarter(periods: list[dict] | None) -> dict[str, list[dict]]:
     return out
 
 
-def extract_score(result: dict | None):
-    """Works for both the TeamFixture-style and live-game-style `result` - same shape."""
-    if not result:
-        return [], [], {}, {}
-    home = result.get("home") or {}
-    away = result.get("away") or {}
-    return (
-        home.get("statistics") or [],
-        away.get("statistics") or [],
-        periods_by_quarter(home.get("periods")),
-        periods_by_quarter(away.get("periods")),
-    )
+def _simple_stats(stats: list[dict] | None) -> dict[str, Any]:
+    return {s["type"]["value"]: s["count"] for s in stats or [] if s.get("type")}
+
+
+def cricket_innings_text(periods: list[dict] | None) -> str | None:
+    """Join one team's innings into a scorecard string, e.g. '180/5 (40 ov) & 95 (22.3 ov)'."""
+    parts = []
+    for period in periods or []:
+        if period.get("type") != "INNINGS":
+            continue
+        pstats = _simple_stats(period.get("statistics"))
+        runs = pstats.get("TOTAL_SCORE")
+        if runs is None:
+            continue
+        outs = pstats.get("TOTAL_OUTS")
+        overs = pstats.get("TOTAL_OVERS")
+        text = f"{runs}/{outs}" if outs is not None else str(runs)
+        if overs is not None:
+            text += f" ({overs} ov)"
+        parts.append(text)
+    return " & ".join(parts) if parts else None
+
+
+def numeric_score(sport: str, stats: list[dict] | None, periods: list[dict] | None) -> int | float | None:
+    """A single comparable score for a team side, regardless of sport."""
+    total = _simple_stats(stats).get("TOTAL_SCORE")
+    if total is not None:
+        return total
+    if sport == "cricket":
+        for period in reversed(periods or []):
+            if period.get("type") == "INNINGS":
+                runs = _simple_stats(period.get("statistics")).get("TOTAL_SCORE")
+                if runs is not None:
+                    return runs
+    return None
+
+
+def format_score_text(sport: str, stats: list[dict] | None, periods: list[dict] | None) -> str | None:
+    """A human-readable scoreline for one team side, tailored to the sport's scoring."""
+    if sport == "cricket":
+        return cricket_innings_text(periods)
+    simple = _simple_stats(stats)
+    total = simple.get("TOTAL_SCORE")
+    if total is None:
+        return None
+    if sport == "afl":
+        goals, behinds = simple.get("TOTAL_GOALS"), simple.get("TOTAL_BEHINDS")
+        if goals is not None and behinds is not None:
+            return f"{goals}.{behinds} ({total})"
+    return str(total)
 
 
 def pick_logo_url(team: dict | None, target_width: int = 64) -> str | None:

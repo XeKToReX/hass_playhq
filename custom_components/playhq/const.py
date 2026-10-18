@@ -17,6 +17,12 @@ CONF_TENANT = "tenant"
 CONF_PROFILE_ID = "profile_id"
 CONF_PLAYER_NAME = "player_name"
 
+CONF_SPORT = "sport"
+SPORT_AFL = "afl"
+SPORT_BASKETBALL = "basketball"
+SPORT_CRICKET = "cricket"
+DEFAULT_SPORT = SPORT_AFL
+
 DEFAULT_TENANT = "afl"
 
 # Poll interval when nothing live is happening, vs. while a game is in progress.

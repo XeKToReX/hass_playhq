@@ -4,9 +4,9 @@
   "codeowners": [],
   "config_flow": true,
   "dependencies": ["http", "frontend"],
-  "documentation": "https://github.com/yourusername/hass-playhq",
-  "issue_tracker": "https://github.com/yourusername/hass-playhq/issues",
+  "documentation": "https://github.com/XeKToReX/hass_playhq",
+  "issue_tracker": "https://github.com/XeKToReX/hass_playhq/issues",
   "iot_class": "cloud_polling",
   "requirements": [],
-  "version": "0.1.0"
+  "version": "0.2.0"
 }
