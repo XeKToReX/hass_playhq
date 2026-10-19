@@ -101,6 +101,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             profile_id=entry.data[CONF_PROFILE_ID],
             player_name=entry.data[CONF_PLAYER_NAME],
             tenant=entry.data.get(CONF_TENANT, DEFAULT_TENANT),
+            sport=entry.data.get(CONF_SPORT, DEFAULT_SPORT),
         )
     else:
         coordinator = PlayHQCoordinator(

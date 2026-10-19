@@ -10,7 +10,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import PlayHQApiError, PlayHQClient
-from .const import DOMAIN, PLAYER_UPDATE_INTERVAL
+from .const import DOMAIN, PLAYER_STAT_DEFAULTS, PLAYER_UPDATE_INTERVAL, SPORT_AFL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,12 +31,21 @@ def _stat(stats_list: list[dict] | None, key: str) -> Any:
     return None
 
 
+def _stats_dict(stats_list: list[dict] | None, sport: str) -> dict[str, Any]:
+    """{stat_key: count}, zero-filled for categories PlayHQ omits when unrecorded."""
+    computed = {_stat_key(s): s.get("count") for s in stats_list or []}
+    return {**PLAYER_STAT_DEFAULTS.get(sport, {}), **computed}
+
+
 class PlayHQPlayerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Polls a player's public career/season statistics."""
 
-    def __init__(self, hass: HomeAssistant, profile_id: str, player_name: str, tenant: str) -> None:
+    def __init__(
+        self, hass: HomeAssistant, profile_id: str, player_name: str, tenant: str, sport: str = SPORT_AFL
+    ) -> None:
         self.profile_id = profile_id
         self.player_name = player_name
+        self.sport = sport
         self.client = PlayHQClient(async_get_clientsession(hass), tenant=tenant)
         super().__init__(
             hass,
@@ -59,9 +68,7 @@ class PlayHQPlayerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         career_clubs = [
             {
                 "club_name": (c.get("club") or {}).get("name"),
-                "statistics": {
-                    _stat_key(s): s.get("count") for s in c.get("statistics") or []
-                },
+                "statistics": _stats_dict(c.get("statistics"), self.sport),
             }
             for c in career.get("clubStatistics") or []
         ]
@@ -77,17 +84,11 @@ class PlayHQPlayerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     {
                         "role": reg.get("role"),
                         "club_name": (reg.get("club") or {}).get("name"),
-                        "statistics": {
-                            _stat_key(s): s.get("count")
-                            for s in reg.get("totalStatistics") or []
-                        },
+                        "statistics": _stats_dict(reg.get("totalStatistics"), self.sport),
                         "teams": [
                             {
                                 "team_name": (t.get("team") or {}).get("name"),
-                                "statistics": {
-                                    _stat_key(s): s.get("count")
-                                    for s in t.get("totalStatistics") or []
-                                },
+                                "statistics": _stats_dict(t.get("totalStatistics"), self.sport),
                             }
                             for t in reg.get("teamStatistics") or []
                         ],
@@ -98,7 +99,7 @@ class PlayHQPlayerCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         return {
             "career": {
-                "totals": {_stat_key(s): s.get("count") for s in career_totals},
+                "totals": _stats_dict(career_totals, self.sport),
                 "clubs": career_clubs,
             },
             "current_season": current_season,

@@ -29,6 +29,16 @@ SPORT_LABELS = {
     SPORT_CRICKET: "Cricket",
 }
 
+# PlayHQ's publicProfileStatistics only returns a stat category once it has at
+# least one recorded event, rather than returning it with a count of 0 - so a
+# player who e.g. hasn't scored yet has no "points" entry at all. These are
+# the categories PlayHQ documents as always tracked per sport, zero-filled in
+# when the API omits them so they still show up (as 0) on the player sensor.
+PLAYER_STAT_DEFAULTS: dict[str, dict[str, int]] = {
+    SPORT_AFL: {"APPEARANCE": 0, "GOAL_COUNT": 0},
+    SPORT_BASKETBALL: {"APPEARANCE": 0, "TOTAL_FOULS": 0, "TOTAL_SCORE": 0},
+}
+
 DEFAULT_TENANT = "afl"
 
 # Poll interval when nothing live is happening, vs. while a game is in progress.
